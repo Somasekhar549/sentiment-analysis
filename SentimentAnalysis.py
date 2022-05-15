@@ -1,5 +1,4 @@
 
-pip install wordninja
 import streamlit as st
 import pandas as pd
 import pandas as pd

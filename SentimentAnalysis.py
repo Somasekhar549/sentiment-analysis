@@ -40,7 +40,7 @@ from sklearn.ensemble import RandomForestClassifier
     
 NB_classifier = pickle.load(open("NB.pickle", "rb"))
 KNN_classifier= pickle.load(open("knn.pickle", "rb"))
-RF_classifier=pickle.load(open("RandomForest.pickle", "rb"))
+#RF_classifier=pickle.load(open("RandomForest.pickle", "rb"))
 
 
 
@@ -110,15 +110,15 @@ def prediction(tweet):
     
     pred1 = KNN_classifier.predict_proba(test_tfidf)
     pred2=NB_classifier.predict_proba(test_counts)
-    pred3=RF_classifier.predict_proba(test_binary_counts)
+    #pred3=RF_classifier.predict_proba(test_binary_counts)
     #pred=classifier.predict(vect)
 
-    pred00=np.add(pred1,pred3)
-    pred01=np.add(pred00,pred2)
+    pred00=np.add(pred1,pred2)
+    #pred01=np.add(pred00,pred3)
     #print(pred00)
     #print(pred01[:10])
     
-    for i in pred01:
+    for i in pred00:
         if i[0]>i[1]:
             return 0
         else:

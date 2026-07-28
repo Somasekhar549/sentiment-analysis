@@ -15,25 +15,34 @@ def _fix_calibrated_classifier(clf):
     Patch a CalibratedClassifierCV loaded from an older scikit-learn pickle
     so it works correctly with newer scikit-learn versions (>=1.6).
 
-    In scikit-learn >=1.2, CalibratedClassifierCV wraps each fold's base
-    estimator inside a `_CalibratedClassifier` object. Pickles created with
-    scikit-learn 1.2.x stored the base estimator under the attribute name
-    `base_estimator`, while scikit-learn >=1.4 renamed it to `estimator`.
-    When the pickle is loaded with a newer version the `estimator` attribute
-    is either absent or None, causing:
-        AttributeError: 'NoneType' object has no attribute ...
-    This helper repairs those objects in-place before first use.
+    Scikit-learn >=1.4 renamed `base_estimator` -> `estimator` on both the
+    top-level CalibratedClassifierCV object AND the inner _CalibratedClassifier
+    wrappers. Old pickles may be missing the `estimator` attribute entirely on
+    the outer object, causing:
+        AttributeError: 'CalibratedClassifierCV' object has no attribute 'estimator'
+    This helper repairs all affected objects in-place before first use.
     """
-    if not hasattr(clf, 'calibrated_classifiers_'):
-        return clf
-    for cal_clf in clf.calibrated_classifiers_:
-        # Case 1: old pickle only has `base_estimator`, new API expects `estimator`
-        if hasattr(cal_clf, 'base_estimator') and not hasattr(cal_clf, 'estimator'):
-            cal_clf.estimator = cal_clf.base_estimator
-        # Case 2: `estimator` exists but is None (deserialization gap)
-        elif getattr(cal_clf, 'estimator', None) is None:
-            if hasattr(cal_clf, 'base_estimator') and cal_clf.base_estimator is not None:
+    # --- Fix the top-level CalibratedClassifierCV object ---
+    # The outer object must have an `estimator` attribute for __sklearn_tags__
+    # and _get_estimator() to work. If missing, set from base_estimator or None
+    # so scikit-learn falls back to its default (LinearSVC) for tag resolution.
+    if not hasattr(clf, 'estimator'):
+        if hasattr(clf, 'base_estimator'):
+            clf.estimator = clf.base_estimator
+        else:
+            clf.estimator = None
+
+    # --- Fix the inner _CalibratedClassifier wrappers ---
+    if hasattr(clf, 'calibrated_classifiers_'):
+        for cal_clf in clf.calibrated_classifiers_:
+            # Case 1: old pickle only has `base_estimator`, new API expects `estimator`
+            if hasattr(cal_clf, 'base_estimator') and not hasattr(cal_clf, 'estimator'):
                 cal_clf.estimator = cal_clf.base_estimator
+            # Case 2: `estimator` exists but is None (deserialization gap)
+            elif getattr(cal_clf, 'estimator', None) is None:
+                if hasattr(cal_clf, 'base_estimator') and cal_clf.base_estimator is not None:
+                    cal_clf.estimator = cal_clf.base_estimator
+
     return clf
 
 
